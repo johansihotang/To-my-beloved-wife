@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Digital Archive</title>
+    
+    <!-- Fonts: Cormorant Garamond for headings, Inter for body -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cinema-black': '#0a0a0a',
+                        'cinema-charcoal': '#1a1a1a',
+                        'cinema-navy': '#050a15',
+                        'cinema-offwhite': '#e8e6e1',
+                        'cinema-beige': '#d5c4a1',
+                        'cinema-gold': '#bfa15f',
+                    },
+                    fontFamily: {
+                        serif: ['"Cormorant Garamond"', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    spacing: {
+                        'screen-1.5': '150vh',
+                        'screen-2': '200vh',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base styles */
+        body {
+            background-color: #0a0a0a;
+            color: #e8e6e1;
+            overflow-x: hidden;
+            cursor: none; /* Hide default cursor for custom cursor */
+        }
+
+        /* Prevent scroll before clicking Start */
+        .no-scroll {
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Film Grain Effect */
+        .film-grain {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Custom Cursor Glow */
+        .cursor-glow {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 40;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+        
+        .cursor-dot {
+            width: 6px;
+            height: 6px;
+            background-color: rgba(232, 230, 225, 0.5);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 41;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            transition: background-color 0.3s;
+        }
+
+        /* Scroll Animations (Blur & Fade) */
+        .reveal-item {
+            opacity: 0;
+            filter: blur(10px);
+            transform: translateY(30px);
+            transition: all 2s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .reveal-item.is-visible {
+            opacity: 1;
+            filter: blur(0);
+            transform: translateY(0);
+        }
+
+        .reveal-slow {
+            transition-duration: 3s;
+        }
+        
+        .reveal-delay-1 { transition-delay: 0.5s; }
+        .reveal-delay-2 { transition-delay: 1.5s; }
+        .reveal-delay-3 { transition-delay: 2.5s; }
+
+        /* Polaroid / Memory Frame Style */
+        .memory-frame {
+            background: #111;
+            padding: 1rem 1rem 3rem 1rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transition: transform 0.5s ease;
+        }
+        .memory-frame:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        /* Glowing Dot for the Reveal */
+        .glowing-dot {
+            width: 4px;
+            height: 4px;
+            background-color: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 20px 5px rgba(255,255,255,0.4);
+            margin: 0 auto;
+            animation: pulse 3s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        /* Hide specific elements initially */
+        #main-content {
+            display: none;
+            opacity: 0;
+            transition: opacity 3s ease;
+        }
+        
+        /* Audio visualizer hint */
+        .audio-wave {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            height: 15px;
+        }
+        .audio-wave span {
+            display: block;
+            width: 2px;
+            background: #e8e6e1;
+            animation: wave 1.2s infinite ease-in-out;
+        }
+        .audio-wave span:nth-child(2) { animation-delay: -1.1s; }
+        .audio-wave span:nth-child(3) { animation-delay: -0.9s; }
+        
+        @keyframes wave {
+            0%, 40%, 100% { height: 4px; }
+            20% { height: 100%; }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased no-scroll selection:bg-cinema-beige selection:text-black">
+
+    <!-- Ambient Sound (Royalty free/ambient placeholder) -->
+    <audio id="bg-music" loop preload="auto">
+        <source src="sempurna.mp3" type="audio/mp3">
+    </audio>
+
+    <!-- Global Effects -->
+    <div class="film-grain"></div>
+    <div class="cursor-glow" id="cursor-glow"></div>
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <canvas id="particle-canvas" class="fixed top-0 left-0 w-full h-full pointer-events-none z-30 opacity-50"></canvas>
+
+    <!-- 1. OPENING SCREEN -->
+    <section id="opening-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-cinema-black transition-opacity duration-1000">
+        <div class="text-center space-y-12 px-6">
+            <p class="text-sm md:text-base tracking-[0.2em] font-light text-gray-400 opacity-0 animate-[fadeIn_3s_ease_forwards]">
+                PERSONAL ARCHIVE
+            </p>
+            <div class="space-y-4">
+                <p class="font-serif text-2xl md:text-3xl italic text-cinema-offwhite opacity-0 animate-[fadeIn_3s_1s_ease_forwards]">
+                    "Aku cuma ingin kamu melihat sesuatu."
+                </p>
+            </div>
+            
+            <button id="start-btn" class="mt-12 group relative px-8 py-3 overflow-hidden rounded-full border border-gray-700 hover:border-cinema-offwhite transition-all duration-500 opacity-0 animate-[fadeIn_3s_2.5s_ease_forwards]">
+                <span class="relative z-10 text-xs tracking-[0.3em] uppercase group-hover:text-black transition-colors duration-500">Mulai</span>
+                <div class="absolute inset-0 bg-cinema-offwhite scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-out"></div>
+            </button>
+            
+            <div id="promise-text" class="hidden mt-8 space-y-2">
+                <p class="font-serif text-lg italic text-gray-400 reveal-item">"Tapi janji..."</p>
+                <p class="font-serif text-lg italic text-gray-400 reveal-item">"jangan tutup halaman ini sebelum selesai."</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN CONTENT (Hidden until Start is clicked) -->
+    <main id="main-content" class="bg-cinema-black w-full">
+        
+        <!-- Audio Control (Subtle) -->
+        <button id="mute-btn" class="fixed top-6 right-6 z-40 text-gray-500 hover:text-white transition-colors opacity-50 hover:opacity-100">
+            <i class="fas fa-volume-up text-sm"></i>
+        </button>
+
+        <!-- 2. THE UNEXPECTED PART (Intro) -->
+        <section class="min-h-screen flex flex-col items-center justify-center py-32 px-6 relative">
+            <div class="absolute top-32 text-xs tracking-[0.3em] font-mono text-gray-600 reveal-item">
+                14.08.2026 <!-- Today's Date Context -->
+            </div>
+            
+            <div class="max-w-2xl mx-auto text-center space-y-64 mt-32">
+                <p class="font-serif text-3xl md:text-5xl leading-relaxed text-cinema-offwhite reveal-item reveal-slow">
+                    "Ada banyak hal yang sebenarnya ingin aku katakan."
+                </p>
+                
+                <div class="space-y-4">
+                    <p class="font-serif text-2xl md:text-4xl leading-relaxed text-gray-400 reveal-item">
+                        "Tapi setiap kali ingin mengatakannya..."
+                    </p>
+                    <p class="font-serif text-2xl md:text-4xl leading-relaxed text-gray-400 reveal-item">
+                        "aku selalu tidak tahu harus mulai dari mana."
+                    </p>
+                </div>
+
+                <div class="space-y-4">
+                    <p class="font-serif text-2xl md:text-4xl leading-relaxed text-cinema-offwhite reveal-item">
+                        "Jadi kali ini..."
+                    </p>
+                    <p class="font-serif text-3xl md:text-5xl leading-relaxed text-cinema-offwhite italic reveal-item">
+                        "aku tulis semuanya di sini."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. MEMORY SECTION (Archive Style) -->
+        <section class="py-40 bg-gradient-to-b from-cinema-black via-cinema-navy to-cinema-black relative">
+            <div class="max-w-5xl mx-auto px-6">
+                <div class="text-xs tracking-[0.4em] text-center text-gray-600 mb-32 reveal-item">
+                    MEMORY FILES / ARCHIVE
+                </div>
+
+                <!-- Frame 001 -->
+                <div class="flex flex-col md:flex-row items-center gap-12 mb-64 reveal-item">
+                    <div class="w-full md:w-1/2 flex justify-center">
+                        <div class="memory-frame w-3/4 max-w-sm">
+                            <div class="aspect-[4/5] bg-[#1a1a1a] relative overflow-hidden group">
+                                <img src="file-001.jpeg" alt="Memory 1" class="object-cover w-full h-full opacity-60 mix-blend-luminosity group-hover:opacity-100 group-hover:mix-blend-normal transition-all duration-1000">
+                                <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-1000"></div>
+                            </div>
+                            <div class="mt-4 flex justify-between items-center text-[10px] text-gray-500 font-mono tracking-widest">
+                                <span>FILE_001</span>
+                                <span>REC</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 space-y-4 text-center md:text-left">
+                        <h3 class="text-xs tracking-[0.2em] text-cinema-gold mb-4">FRAME 001</h3>
+                        <p class="font-serif text-2xl md:text-4xl text-gray-300 leading-snug">
+                            "Hari ketika aku pertama kali sadar bahwa ada wanita yang mencintaiku..."
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Frame 002 -->
+                <div class="flex flex-col md:flex-row-reverse items-center gap-12 mb-64 reveal-item">
+                    <div class="w-full md:w-1/2 flex justify-center">
+                        <div class="memory-frame w-3/4 max-w-sm">
+                            <div class="aspect-[4/5] bg-[#1a1a1a] relative overflow-hidden group">
+                                <img src="file-002.jpeg" alt="Memory 2" class="object-cover w-full h-full opacity-60 mix-blend-luminosity group-hover:opacity-100 group-hover:mix-blend-normal transition-all duration-1000">
+                            </div>
+                            <div class="mt-4 flex justify-between items-center text-[10px] text-gray-500 font-mono tracking-widest">
+                                <span>FILE_002</span>
+                                <span>REC</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 space-y-4 text-center md:text-right">
+                        <h3 class="text-xs tracking-[0.2em] text-cinema-gold mb-4">FRAME 002</h3>
+                        <p class="font-serif text-2xl md:text-4xl text-gray-300 leading-snug">
+                            "Ternyata kehadiran seseorang bisa membuat hari biasa terasa berbeda."
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Frame 003 -->
+                <div class="flex flex-col md:flex-row items-center gap-12 reveal-item">
+                    <div class="w-full md:w-1/2 flex justify-center">
+                        <div class="memory-frame w-3/4 max-w-sm">
+                            <div class="aspect-[4/5] bg-[#1a1a1a] relative overflow-hidden group">
+                                <img src="file-003.jpeg" alt="Memory 3" class="object-cover w-full h-full opacity-60 mix-blend-luminosity group-hover:opacity-100 group-hover:mix-blend-normal transition-all duration-1000">
+                            </div>
+                            <div class="mt-4 flex justify-between items-center text-[10px] text-gray-500 font-mono tracking-widest">
+                                <span>FILE_003</span>
+                                <span>REC</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 space-y-4 text-center md:text-left">
+                        <h3 class="text-xs tracking-[0.2em] text-cinema-gold mb-4">FRAME 003</h3>
+                        <p class="font-serif text-2xl md:text-4xl text-gray-300 leading-snug">
+                            "Dan tanpa sadar..."
+                        </p>
+                        <p class="font-serif text-2xl md:text-4xl text-gray-400 italic">
+                            "aku mulai menunggu pesanmu dan selalu menginginkan diri mu every time."
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. AUDIO CUE -->
+        <section class="py-64 flex justify-center items-center">
+            <div class="text-center space-y-6 reveal-item">
+                <div class="audio-wave mx-auto mb-4 opacity-50">
+                    <span></span><span></span><span></span>
+                </div>
+                <p class="text-sm md:text-base tracking-widest font-light text-gray-500 italic">
+                    "Naikkan volumenya sedikit."
+                </p>
+            </div>
+        </section>
+
+        <!-- 5. THINGS I NEVER SAID -->
+        <section class="w-full flex flex-col items-center justify-center py-40 px-6">
+            <div class="max-w-3xl mx-auto text-center space-y-[40vh]">
+                <p class="font-serif text-3xl md:text-5xl text-gray-400 reveal-item">
+                    "Aku mungkin tidak pandai menunjukan perasaan dan sering membuat kamu bingung."
+                </p>
+                <p class="font-serif text-3xl md:text-5xl text-gray-400 reveal-item">
+                    "Aku mungkin terlihat biasa saja."
+                </p>
+                <p class="font-serif text-3xl md:text-5xl text-gray-400 reveal-item">
+                    "Kadang aku bahkan tidak tahu bagaimana menjelaskannya dengan perasaan ku ini."
+                </p>
+                
+                <div class="reveal-item flex flex-col items-center justify-center min-h-[50vh]">
+                    <p class="font-serif text-4xl md:text-6xl text-cinema-offwhite mb-12">
+                        "Tapi kamu berarti."
+                    </p>
+                    <p class="font-serif text-3xl md:text-5xl text-gray-400 italic reveal-delay-2">
+                        "Lebih dari yang kamu tahu."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. TIMELINE HUBUNGAN -->
+        <section class="py-40 bg-cinema-charcoal relative">
+            <div class="max-w-xl mx-auto px-6 relative">
+                <!-- Vertical Line -->
+                <div class="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-gray-700 to-transparent -translate-x-1/2"></div>
+                
+                <div class="space-y-48 py-20 relative z-10">
+                    <!-- Point 1 -->
+                    <div class="text-center reveal-item bg-cinema-charcoal py-4">
+                        <div class="text-xs font-mono tracking-widest text-cinema-gold mb-2">DAY 01</div>
+                        <div class="font-serif text-2xl text-gray-300">The most beautiful day</div>
+                    </div>
+                    
+                    <!-- Point 2 -->
+                    <div class="text-center reveal-item bg-cinema-charcoal py-4">
+                        <div class="text-xs font-mono tracking-widest text-cinema-gold mb-2">DAY 3</div>
+                        <div class="font-serif text-2xl text-gray-300">First memory</div>
+                    </div>
+
+                    <!-- Point 3 -->
+                    <div class="text-center reveal-item bg-cinema-charcoal py-4">
+                        <div class="text-xs font-mono tracking-widest text-cinema-gold mb-2">DAY 7 </div>
+                        <div class="font-serif text-2xl text-gray-300">the first little smile</div>
+                    </div>
+
+                    <!-- Point 4 -->
+                    <div class="text-center reveal-item bg-cinema-charcoal py-4">
+                        <div class="text-xs font-mono tracking-widest text-cinema-gold mb-2">DAY 19</div>
+                        <div class="font-serif text-2xl text-gray-300 italic">A day I don't want to forget</div>
+                    </div>
+
+                    <!-- TODAY -->
+                    <div class="text-center reveal-item bg-cinema-charcoal py-8 mt-32 border border-gray-800 rounded-lg shadow-2xl">
+                        <div class="text-sm font-mono tracking-[0.3em] text-cinema-offwhite mb-6">TODAY</div>
+                        <div class="space-y-2">
+                            <p class="font-serif text-3xl text-gray-400">"And somehow..."</p>
+                            <p class="font-serif text-4xl text-cinema-gold italic">"I'm still here."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. THE "UNEXPECTED" REVEAL -->
+        <!-- This section creates a huge gap to reset the mood -->
+        <section class="h-[200vh] bg-black flex flex-col justify-center relative">
+            <div class="sticky top-1/2 -translate-y-1/2 w-full text-center px-6">
+                <div class="glowing-dot mb-20 reveal-item"></div>
+                
+                <div class="space-y-24 max-w-3xl mx-auto">
+                    <p class="font-serif text-3xl md:text-5xl text-gray-400 reveal-item">
+                        "Sebenarnya..."
+                    </p>
+                    <p class="font-serif text-2xl md:text-4xl text-gray-500 leading-relaxed reveal-item reveal-delay-1">
+                        "Aku tidak membuat website ini untuk menceritakan masa lalu."
+                    </p>
+                    <p class="font-serif text-2xl md:text-4xl text-cinema-offwhite leading-relaxed italic reveal-item reveal-delay-2">
+                        "Aku membuatnya untuk mengatakan sesuatu yang sampai sekarang belum bisa kukatakan dengan sempurna."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. FINAL REVEAL (I LOVE YOU) -->
+        <section id="white-transition" class="min-h-screen bg-black transition-colors duration-[3000ms] flex flex-col items-center justify-center py-40 px-6">
+            <div class="text-center space-y-12 mb-40">
+                <h1 class="font-serif text-7xl md:text-9xl lg:text-[12rem] tracking-tight text-cinema-offwhite reveal-item reveal-slow">
+                    I
+                </h1>
+                <h1 class="font-serif text-7xl md:text-9xl lg:text-[12rem] tracking-tight text-cinema-offwhite reveal-item reveal-slow reveal-delay-1">
+                    LOVE
+                </h1>
+                <h1 class="font-serif text-7xl md:text-9xl lg:text-[12rem] tracking-tight text-cinema-gold italic reveal-item reveal-slow reveal-delay-2">
+                    YOU.
+                </h1>
+            </div>
+
+            <div class="max-w-2xl mx-auto text-center space-y-12 mt-32">
+                <p class="font-sans font-light text-lg md:text-xl text-gray-400 tracking-wide reveal-item">
+                    "Bukan karena kita sempurna."
+                </p>
+                <p class="font-sans font-light text-lg md:text-xl text-gray-400 tracking-wide reveal-item">
+                    "Bukan karena semuanya selalu mudah."
+                </p>
+                <p class="font-sans font-light text-lg md:text-xl text-gray-300 tracking-wide leading-loose reveal-item">
+                    "Tapi karena dari sekian banyak orang yang bisa hadir dalam hidupku..."
+                </p>
+                <p class="font-serif text-3xl md:text-5xl text-cinema-offwhite italic mt-12 reveal-item reveal-slow">
+                    "Aku bersyukur kamu adalah salah satunya yang hadir dalam hidupku."
+                </p>
+            </div>
+        </section>
+
+        <!-- 9. ENDING YANG LEBIH DALAM -->
+        <section class="min-h-screen bg-cinema-black flex flex-col items-center justify-center py-40 px-6 relative overflow-hidden">
+            <div class="max-w-2xl mx-auto text-center space-y-16 z-10">
+                <p class="font-serif text-2xl md:text-4xl text-gray-500 reveal-item">
+                    "Kalau suatu hari nanti kamu lupa..."
+                </p>
+                <p class="font-serif text-3xl md:text-5xl text-gray-400 italic reveal-item">
+                    "buka website ini lagi,karena website ini tidak pernah mati sepeti perasaanku."
+                </p>
+                <div class="py-12"></div>
+                <p class="font-serif text-2xl md:text-4xl text-gray-500 reveal-item">
+                    "Dan ingat..."
+                </p>
+                <p class="font-serif text-4xl md:text-6xl text-cinema-gold reveal-item reveal-slow">
+                    "pernah ada seseorang yang memilihmu."
+                </p>
+            </div>
+
+            <!-- Footer area -->
+            <div class="mt-40 flex flex-col items-center gap-12 z-10 reveal-item reveal-slow reveal-delay-2">
+                <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="group flex items-center gap-3 text-xs tracking-[0.3em] uppercase text-gray-500 hover:text-cinema-offwhite transition-colors duration-300">
+                    <i class="fas fa-undo opacity-50 group-hover:opacity-100 group-hover:-rotate-180 transition-all duration-700"></i>
+                    Replay our story
+                </button>
+                
+                <p class="text-[10px] tracking-[0.4em] font-mono text-gray-700 mt-20">
+                    THIS WEBSITE WILL ALWAYS BE YOURS.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Inline CSS animations that Tailwind doesn't have natively
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; filter: blur(5px); }
+                to { opacity: 1; filter: blur(0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Elements
+            const startBtn = document.getElementById('start-btn');
+            const openingScreen = document.getElementById('opening-screen');
+            const promiseText = document.getElementById('promise-text');
+            const mainContent = document.getElementById('main-content');
+            const bgMusic = document.getElementById('bg-music');
+            const muteBtn = document.getElementById('mute-btn');
+            const cursorGlow = document.getElementById('cursor-glow');
+            const cursorDot = document.getElementById('cursor-dot');
+            const whiteTransition = document.getElementById('white-transition');
+
+            // Set initial volume low as requested
+            bgMusic.volume = 0.2;
+
+            // 2. Custom Cursor Logic
+            document.addEventListener('mousemove', (e) => {
+                const x = e.clientX;
+                const y = e.clientY;
+                
+                // Use requestAnimationFrame for smoother performance
+                requestAnimationFrame(() => {
+                    cursorGlow.style.left = `${x}px`;
+                    cursorGlow.style.top = `${y}px`;
+                    
+                    cursorDot.style.left = `${x}px`;
+                    cursorDot.style.top = `${y}px`;
+                });
+            });
+
+            // Interactive elements change cursor size
+            const interactives = document.querySelectorAll('button, a');
+            interactives.forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    cursorGlow.style.width = '100px';
+                    cursorGlow.style.height = '100px';
+                    cursorDot.style.transform = 'translate(-50%, -50%) scale(2)';
+                    cursorDot.style.backgroundColor = '#bfa15f'; // gold
+                });
+                el.addEventListener('mouseleave', () => {
+                    cursorGlow.style.width = '400px';
+                    cursorGlow.style.height = '400px';
+                    cursorDot.style.transform = 'translate(-50%, -50%) scale(1)';
+                    cursorDot.style.backgroundColor = 'rgba(232, 230, 225, 0.5)';
+                });
+            });
+
+            // 3. Opening Sequence Logic
+            startBtn.addEventListener('click', () => {
+                // Hide button, show promise text
+                startBtn.style.display = 'none';
+                promiseText.classList.remove('hidden');
+                
+                // Trigger reveal for promise text elements
+                setTimeout(() => {
+                    promiseText.querySelectorAll('.reveal-item').forEach((el, index) => {
+                        setTimeout(() => el.classList.add('is-visible'), index * 1500);
+                    });
+                }, 100);
+
+                // Wait, then fade out opening and show main
+                setTimeout(() => {
+                    openingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        openingScreen.style.display = 'none';
+                        document.body.classList.remove('no-scroll');
+                        mainContent.style.display = 'block';
+                        
+                        // Force reflow
+                        void mainContent.offsetWidth; 
+                        mainContent.style.opacity = '1';
+                        
+                        // Try to play audio
+                        bgMusic.play().catch(e => console.log("Audio autoplay blocked by browser, user needs to click again.", e));
+                    }, 1000);
+                }, 5000);
+            });
+
+            // 4. Audio Controls
+            let isMuted = false;
+            muteBtn.addEventListener('click', () => {
+                isMuted = !isMuted;
+                bgMusic.muted = isMuted;
+                muteBtn.innerHTML = isMuted ? '<i class="fas fa-volume-mute text-sm"></i>' : '<i class="fas fa-volume-up text-sm"></i>';
+            });
+
+            // 5. Scroll Intersection Observer (The Core Animation)
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.2 // Trigger when 20% visible
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        
+                        // Special logic for white background transition near the end
+                        if(entry.target.id === 'white-transition' && entry.intersectionRatio > 0.3) {
+                            entry.target.classList.add('bg-cinema-charcoal');
+                            entry.target.classList.remove('bg-black');
+                        }
+                    } else {
+                        // Optional: remove class to animate again when scrolling up
+                        // entry.target.classList.remove('is-visible');
+                        
+                        if(entry.target.id === 'white-transition') {
+                            entry.target.classList.remove('bg-cinema-charcoal');
+                            entry.target.classList.add('bg-black');
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.reveal-item').forEach(el => {
+                observer.observe(el);
+            });
+
+            // 7. Particle System (Dust/Light particles)
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 1.5;
+                    this.speedX = Math.random() * 0.5 - 0.25;
+                    this.speedY = Math.random() * 0.5 - 0.25;
+                    this.opacity = Math.random() * 0.5;
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    
+                    if (this.x > canvas.width) this.x = 0;
+                    if (this.x < 0) this.x = canvas.width;
+                    if (this.y > canvas.height) this.y = 0;
+                    if (this.y < 0) this.y = canvas.height;
+                }
+                draw() {
+                    ctx.fillStyle = `rgba(232, 230, 225, ${this.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function initParticles() {
+                particles = [];
+                for (let i = 0; i < 50; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+                }
+                requestAnimationFrame(animateParticles);
+            }
+
+            initParticles();
+            animateParticles();
+        });
+    </script>
+</body>
+</html>
